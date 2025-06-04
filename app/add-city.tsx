@@ -23,6 +23,7 @@ export default function AddCity() {
 
     setLoading(true);
     try {
+      // Inserir o IP correto do servidor
       const response = await fetch("http://10.45.2.157:5000/weather", {
         method: "POST",
         headers: {
