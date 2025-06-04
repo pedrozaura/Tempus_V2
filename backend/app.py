@@ -4,10 +4,15 @@ from config import Config
 from extensions import db, migrate
 from models import Weather
 from models import Alert 
+from flask_cors import CORS
+
+import requests
+OPENWEATHER_API_KEY = "91b363d9e740bd88f0809fa3a5db21ed"  # Substitua com sua chave
 
 from models import Cidade, Previsao
 
 app = Flask(__name__)
+CORS(app)
 app.config.from_object(Config)
 
 # Inicializações
@@ -35,29 +40,38 @@ def index():
 
 @app.route("/weather", methods=["POST"])
 def create_weather():
-    """
-    Adiciona um novo registro meteorológico
-    ---
-    parameters:
-      - in: body
-        name: body
-        schema:
-          properties:
-            city:
-              type: string
-            temperature:
-              type: number
-            condition:
-              type: string
-    responses:
-      201:
-        description: Registro criado
-    """
     data = request.get_json()
-    new = Weather(**data)
-    db.session.add(new)
+
+    if not data or "city" not in data:
+        return jsonify({"error": "Campo 'city' é obrigatório"}), 400
+
+    city = data.get("city")
+
+    # Consulta na OpenWeatherMap
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={OPENWEATHER_API_KEY}&units=metric&lang=pt_br"
+    try:
+        resp = requests.get(url)
+        resp.raise_for_status()  # Vai levantar erro se status != 200
+    except requests.RequestException:
+        return jsonify({"error": "Falha ao consultar OpenWeatherMap"}), 400
+
+    weather_data = resp.json()
+
+    # Validar se os dados essenciais existem na resposta
+    if "main" not in weather_data or "temp" not in weather_data["main"] \
+       or "weather" not in weather_data or len(weather_data["weather"]) == 0 \
+       or "description" not in weather_data["weather"][0]:
+        return jsonify({"error": "Dados incompletos recebidos da OpenWeatherMap"}), 400
+
+    temperature = weather_data["main"]["temp"]
+    condition = weather_data["weather"][0]["description"]
+    city_name = weather_data.get("name", city)  # Nome formatado da cidade
+
+    new_weather = Weather(city=city_name, temperature=temperature, condition=condition)
+    db.session.add(new_weather)
     db.session.commit()
-    return jsonify(new.to_dict()), 201
+
+    return jsonify(new_weather.to_dict()), 201
 
 @app.route("/weather", methods=["GET"])
 def list_weather():
@@ -71,21 +85,11 @@ def list_weather():
     return jsonify([w.to_dict() for w in Weather.query.all()])
 
 @app.route("/weather/<int:id>", methods=["GET"])
-def get_weather(id):
-    """
-    Retorna um registro meteorológico específico
-    ---
-    parameters:
-      - name: id
-        in: path
-        type: integer
-        required: true
-    responses:
-      200:
-        description: Registro retornado
-    """
-    item = Weather.query.get_or_404(id)
-    return jsonify(item.to_dict())
+def get_weather_by_id(id):
+    weather = Weather.query.get(id)
+    if not weather:
+        return jsonify({"error": "Registro não encontrado"}), 404
+    return jsonify(weather.to_dict())
 
 @app.route("/weather/<int:id>", methods=["PUT"])
 def update_weather(id):
