@@ -5,6 +5,8 @@ from extensions import db, migrate
 from models import Weather
 from models import Alert 
 
+from models import Cidade, Previsao
+
 app = Flask(__name__)
 app.config.from_object(Config)
 
@@ -210,6 +212,46 @@ def delete_alert(id):
     db.session.delete(alert)
     db.session.commit()
     return '', 204
+
+@app.route("/cidades", methods=["POST"])
+def criar_cidade():
+    data = request.get_json()
+    nova = Cidade(nome=data["nome"], estado=data["estado"])
+    db.session.add(nova)
+    db.session.commit()
+    return jsonify(nova.to_dict()), 201
+
+@app.route("/cidades", methods=["GET"])
+def listar_cidades():
+    return jsonify([c.to_dict() for c in Cidade.query.all()])
+
+@app.route("/previsoes", methods=["POST"])
+def criar_previsoes():
+    """
+    Espera um array JSON com previsões dos próximos dias:
+    [
+      { "cidade_id": 1, "data": "2025-06-04", "temperatura": 22.5, "clima": "Céu limpo", "umidade": 75 },
+      ...
+    ]
+    """
+    dados = request.get_json()
+    novas = []
+    for item in dados:
+        p = Previsao(**item)
+        db.session.add(p)
+        novas.append(p)
+    db.session.commit()
+    return jsonify([p.to_dict() for p in novas]), 201
+
+@app.route("/previsoes/<int:cidade_id>", methods=["GET"])
+def listar_previsoes_por_cidade(cidade_id):
+    previsoes = Previsao.query.filter_by(cidade_id=cidade_id).order_by(Previsao.data).all()
+    return jsonify([p.to_dict() for p in previsoes])
+
+
+
+
+
 
 if __name__ == "__main__":
     app.run()
