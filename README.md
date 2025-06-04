@@ -67,7 +67,7 @@ Substitua http://<SEU_IP>:5000/weather pelo IP real do seu computador na rede lo
 npx expo start --clear
 ```
 
-# Para rodar as MIgrates
+# Para rodar as Migrates
 
 ```bash
 flask db init
