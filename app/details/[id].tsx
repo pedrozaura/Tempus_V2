@@ -20,26 +20,28 @@ type ForecastItem = {
 export default function ForecastDetails() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [forecast, setForecast] = useState<ForecastItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [forecasts, setForecasts] = useState<ForecastItem[]>([]);
   const [cityName, setCityName] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Primeiro busca o nome da cidade pelo ID
+        // 1. Primeiro busca o nome da cidade
         const cityRes = await fetch(`http://10.45.2.157:5000/weather/${id}`);
         const cityData = await cityRes.json();
         setCityName(cityData.city);
 
-        // Depois busca a previsão
+        // 2. Depois busca as previsões para essa cidade
         const forecastRes = await fetch(
-          `http://10.45.2.157:5000/forecast/${cityData.city}`
+          `http://10.45.2.157:5000/forecast/${encodeURIComponent(
+            cityData.city
+          )}`
         );
         const forecastData = await forecastRes.json();
-        setForecast(forecastData);
+        setForecasts(forecastData);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Erro ao buscar dados:", error);
       } finally {
         setLoading(false);
       }
@@ -61,10 +63,10 @@ export default function ForecastDetails() {
       <Text style={styles.title}>Previsão para {cityName}</Text>
 
       <FlatList
-        data={forecast}
+        data={forecasts}
         keyExtractor={(item) => item.date}
         renderItem={({ item }) => (
-          <View style={styles.forecastItem}>
+          <View style={styles.forecastCard}>
             <Text style={styles.date}>
               {new Date(item.date).toLocaleDateString("pt-BR", {
                 weekday: "long",
@@ -72,10 +74,10 @@ export default function ForecastDetails() {
                 month: "long",
               })}
             </Text>
-            <Text>Temperatura: {item.temperature}°C</Text>
-            <Text>Condição: {item.condition}</Text>
-            <Text>Umidade: {item.humidity}%</Text>
-            <Text>Vento: {item.wind_speed} km/h</Text>
+            <Text>🌡️ Temperatura: {item.temperature}°C</Text>
+            <Text>☁️ Condição: {item.condition}</Text>
+            <Text>💧 Umidade: {item.humidity}%</Text>
+            <Text>🌬️ Vento: {item.wind_speed} km/h</Text>
           </View>
         )}
       />
@@ -89,21 +91,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    backgroundColor: "#f5f5f5",
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 16,
+    marginBottom: 20,
     textAlign: "center",
+    color: "#333",
   },
-  forecastItem: {
+  forecastCard: {
+    backgroundColor: "white",
     padding: 16,
-    borderBottomWidth: 1,
-    borderColor: "#ccc",
-    marginBottom: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   date: {
+    fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 4,
+    marginBottom: 8,
+    color: "#444",
   },
 });

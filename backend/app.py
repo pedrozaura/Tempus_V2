@@ -295,29 +295,32 @@ def create_forecast(city):
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
     
-@app.route("/forecast/<city>", methods=["GET"])
-def get_forecast(city):
+@app.route('/forecast/<city_name>', methods=['GET'])
+def get_5day_forecast(city_name):
     try:
+        # Busca previsões dos próximos 5 dias (filtra para 1 registro por dia)
         forecasts = WeatherForecast.query.filter(
-            WeatherForecast.city == city,
-            WeatherForecast.date >= datetime.utcnow()
+            WeatherForecast.city == city_name,
+            WeatherForecast.date >= datetime.utcnow(),
+            WeatherForecast.date <= datetime.utcnow() + timedelta(days=5)
         ).order_by(WeatherForecast.date).all()
         
         if not forecasts:
             return jsonify({"error": "Nenhuma previsão encontrada"}), 404
             
-        result = [{
-            "date": f.date.isoformat(),
+        # Agrupa por dia (opcional)
+        forecast_data = [{
+            "date": f.date.strftime('%Y-%m-%d'),
             "temperature": f.temperature,
             "condition": f.condition,
             "humidity": f.humidity,
             "wind_speed": f.wind_speed
         } for f in forecasts]
         
-        return jsonify(result), 200
+        return jsonify(forecast_data), 200
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 500
 
 
 

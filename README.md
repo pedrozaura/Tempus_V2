@@ -60,5 +60,5 @@ npx expo start --clear
 
 Para rodar as MIgrates
 flask db init
-flask db migrate -m "Descrição da migração (ex: cria tabela WeatherForecast)"
+flask db migrate -m "Descrição da migração (ex: cria tabela WeatherForecast)"S
 flask db upgrade
