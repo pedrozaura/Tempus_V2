@@ -51,20 +51,27 @@ Join our community of developers creating universal apps.
 
 comando para subir o flask sem limitação:
 
-# flask run --host=0.0.0.0 --port=5000
+```bash
+ flask run --host=0.0.0.0 --port=5000
+```
 
 Teste Web:
 
-# Substitua http://<SEU_IP>:5000/weather pelo IP real do seu computador na rede local.
+```bash
+Substitua http://<SEU_IP>:5000/weather pelo IP real do seu computador na rede local.
+```
 
-para iniciar o app usar o seguinte comando, este comando é responsavel por subir sempre limpa a nova compilação.
+# para iniciar o app usar o seguinte comando, este comando é responsavel por subir sempre limpa a nova compilação.
 
-# npx expo start --clear
+```bash
+npx expo start --clear
+```
 
 # Para rodar as MIgrates
 
-# flask db init
+```bash
+flask db init
+flask db migrate -m "Descrição da migração (ex: cria tabela WeatherForecast)"
+flask db upgrade
 
-# flask db migrate -m "Descrição da migração (ex: cria tabela WeatherForecast)"S
-
-# flask db upgrade
+```
