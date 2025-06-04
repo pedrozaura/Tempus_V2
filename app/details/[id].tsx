@@ -64,7 +64,9 @@ export default function ForecastDetails() {
 
       <FlatList
         data={forecasts}
-        keyExtractor={(item) => item.date}
+        keyExtractor={(item) =>
+          `${item.date}-${Math.random().toString(36).substr(2, 9)}`
+        } // Chave única
         renderItem={({ item }) => (
           <View style={styles.forecastCard}>
             <Text style={styles.date}>

@@ -5,7 +5,7 @@ from extensions import db, migrate
 from models import Weather
 from models import WeatherForecast
 from models import Alert 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse
 from flask_cors import CORS
 
@@ -296,8 +296,8 @@ def get_5day_forecast(city_name):
         # Busca previsões dos próximos 5 dias (filtra para 1 registro por dia)
         forecasts = WeatherForecast.query.filter(
             WeatherForecast.city == city_name,
-            WeatherForecast.date >= datetime.utcnow(),
-            WeatherForecast.date <= datetime.utcnow() + timedelta(days=5)
+            WeatherForecast.date >= datetime.now(timezone.utc),
+            WeatherForecast.date <= datetime.now(timezone.utc) + timedelta(days=5)
         ).order_by(WeatherForecast.date).all()
         
         if not forecasts:
