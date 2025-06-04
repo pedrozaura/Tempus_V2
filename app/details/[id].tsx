@@ -1,68 +1,109 @@
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Button,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
-type WeatherDetails = {
-  id: number;
-  city: string;
+type ForecastItem = {
+  date: string;
   temperature: number;
   condition: string;
+  humidity: number;
+  wind_speed: number;
 };
 
-export default function Details() {
+export default function ForecastDetails() {
+  const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [weather, setWeather] = useState<WeatherDetails | null>(null);
+  const [forecast, setForecast] = useState<ForecastItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cityName, setCityName] = useState("");
 
   useEffect(() => {
-    const fetchWeatherDetails = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`http://172.16.0.106:5000/weather/${id}`);
-        if (!response.ok) {
-          throw new Error(`Erro HTTP: ${response.status}`);
-        }
-        const data = await response.json();
-        setWeather(data);
+        // Primeiro busca o nome da cidade pelo ID
+        const cityRes = await fetch(`http://10.45.2.157:5000/weather/${id}`);
+        const cityData = await cityRes.json();
+        setCityName(cityData.city);
+
+        // Depois busca a previsão
+        const forecastRes = await fetch(
+          `http://10.45.2.157:5000/forecast/${cityData.city}`
+        );
+        const forecastData = await forecastRes.json();
+        setForecast(forecastData);
       } catch (error) {
-        console.error("Erro ao buscar detalhes:", error);
-        Alert.alert("Erro", "Não foi possível carregar os detalhes do clima.");
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchWeatherDetails();
+    fetchData();
   }, [id]);
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View style={styles.container}>
         <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  if (!weather) {
-    return (
-      <View style={styles.center}>
-        <Text>Dados não encontrados.</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.city}>{weather.city}</Text>
-      <Text style={styles.temperature}>{weather.temperature}°C</Text>
-      <Text style={styles.condition}>{weather.condition}</Text>
+      <Text style={styles.title}>Previsão para {cityName}</Text>
+
+      <FlatList
+        data={forecast}
+        keyExtractor={(item) => item.date}
+        renderItem={({ item }) => (
+          <View style={styles.forecastItem}>
+            <Text style={styles.date}>
+              {new Date(item.date).toLocaleDateString("pt-BR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })}
+            </Text>
+            <Text>Temperatura: {item.temperature}°C</Text>
+            <Text>Condição: {item.condition}</Text>
+            <Text>Umidade: {item.humidity}%</Text>
+            <Text>Vento: {item.wind_speed} km/h</Text>
+          </View>
+        )}
+      />
+
+      <Button title="Voltar" onPress={() => router.back()} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  container: { flex: 1, padding: 16, alignItems: "center" },
-  city: { fontSize: 24, fontWeight: "bold", marginBottom: 8 },
-  temperature: { fontSize: 48, marginBottom: 8 },
-  condition: { fontSize: 18 },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  forecastItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderColor: "#ccc",
+    marginBottom: 8,
+  },
+  date: {
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
 });

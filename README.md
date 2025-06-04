@@ -54,3 +54,11 @@ flask run --host=0.0.0.0 --port=5000
 
 Teste Web:
 Substitua http://<SEU_IP>:5000/weather pelo IP real do seu computador na rede local.
+
+para iniciar o app usar o seguinte comando, este comando é responsavel por subir sempre limpa a nova compilação.
+npx expo start --clear
+
+Para rodar as MIgrates
+flask db init
+flask db migrate -m "Descrição da migração (ex: cria tabela WeatherForecast)"
+flask db upgrade

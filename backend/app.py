@@ -3,8 +3,12 @@ from flasgger import Swagger
 from config import Config
 from extensions import db, migrate
 from models import Weather
+from models import WeatherForecast
 from models import Alert 
+from datetime import datetime, timedelta
+from dateutil.parser import parse
 from flask_cors import CORS
+
 
 import requests
 OPENWEATHER_API_KEY = "91b363d9e740bd88f0809fa3a5db21ed"  # Substitua com sua chave
@@ -253,7 +257,67 @@ def listar_previsoes_por_cidade(cidade_id):
     return jsonify([p.to_dict() for p in previsoes])
 
 
+@app.route("/forecast/<city>", methods=["POST"])
+def create_forecast(city):
+    try:
+        # Primeiro verifica se já temos dados recentes (últimas 6 horas)
+        existing = WeatherForecast.query.filter(
+            WeatherForecast.city == city,
+            WeatherForecast.created_at >= datetime.utcnow() - timedelta(hours=6)
+        ).first()
+        
+        if existing:
+            return jsonify({"message": "Dados já estão atualizados"}), 200
 
+        # Busca novos dados na OpenWeather
+        url = f"https://api.openweathermap.org/data/2.5/forecast?q={city}&appid={OPENWEATHER_API_KEY}&units=metric&lang=pt_br"
+        resp = requests.get(url)
+        resp.raise_for_status()
+        data = resp.json()
+
+        # Processa cada dia da previsão
+        for item in data['list']:
+            forecast_date = parse(item['dt_txt'])
+            new_forecast = WeatherForecast(
+                city=city,
+                date=forecast_date,
+                temperature=item['main']['temp'],
+                condition=item['weather'][0]['description'],
+                humidity=item['main']['humidity'],
+                wind_speed=item['wind']['speed']
+            )
+            db.session.add(new_forecast)
+        
+        db.session.commit()
+        return jsonify({"message": "Previsão atualizada com sucesso"}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+    
+@app.route("/forecast/<city>", methods=["GET"])
+def get_forecast(city):
+    try:
+        forecasts = WeatherForecast.query.filter(
+            WeatherForecast.city == city,
+            WeatherForecast.date >= datetime.utcnow()
+        ).order_by(WeatherForecast.date).all()
+        
+        if not forecasts:
+            return jsonify({"error": "Nenhuma previsão encontrada"}), 404
+            
+        result = [{
+            "date": f.date.isoformat(),
+            "temperature": f.temperature,
+            "condition": f.condition,
+            "humidity": f.humidity,
+            "wind_speed": f.wind_speed
+        } for f in forecasts]
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 
 

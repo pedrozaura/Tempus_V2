@@ -57,3 +57,13 @@ class Previsao(db.Model):
             "umidade": self.umidade,
             "cidade": self.cidade.to_dict() if self.cidade else None,
         }
+    
+class WeatherForecast(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    city = db.Column(db.String(100), nullable=False)
+    date = db.Column(db.DateTime, nullable=False)
+    temperature = db.Column(db.Float, nullable=False)
+    condition = db.Column(db.String(100), nullable=False)
+    humidity = db.Column(db.Float)
+    wind_speed = db.Column(db.Float)
+    created_at = db.Column(db.DateTime, default=datetime.now)
