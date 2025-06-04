@@ -45,37 +45,38 @@ def index():
 @app.route("/weather", methods=["POST"])
 def create_weather():
     data = request.get_json()
-
+    
     if not data or "city" not in data:
         return jsonify({"error": "Campo 'city' é obrigatório"}), 400
 
     city = data.get("city")
 
-    # Consulta na OpenWeatherMap
-    url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={OPENWEATHER_API_KEY}&units=metric&lang=pt_br"
+    # 1. Consulta na OpenWeatherMap (dados atuais)
+    current_url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={OPENWEATHER_API_KEY}&units=metric&lang=pt_br"
+    
     try:
-        resp = requests.get(url)
-        resp.raise_for_status()  # Vai levantar erro se status != 200
-    except requests.RequestException:
-        return jsonify({"error": "Falha ao consultar OpenWeatherMap"}), 400
+        # Dados atuais
+        current_resp = requests.get(current_url)
+        current_resp.raise_for_status()
+        current_data = current_resp.json()
 
-    weather_data = resp.json()
+        temperature = current_data['main']['temp']
+        condition = current_data['weather'][0]['description']
+        city_name = current_data.get("name", city)
 
-    # Validar se os dados essenciais existem na resposta
-    if "main" not in weather_data or "temp" not in weather_data["main"] \
-       or "weather" not in weather_data or len(weather_data["weather"]) == 0 \
-       or "description" not in weather_data["weather"][0]:
-        return jsonify({"error": "Dados incompletos recebidos da OpenWeatherMap"}), 400
+        new_weather = Weather(city=city_name, temperature=temperature, condition=condition)
+        db.session.add(new_weather)
+        db.session.commit()
 
-    temperature = weather_data["main"]["temp"]
-    condition = weather_data["weather"][0]["description"]
-    city_name = weather_data.get("name", city)  # Nome formatado da cidade
+        # 2. Dispara a busca das previsões de 5 dias
+        forecast_url = f"http://localhost:5000/forecast/{city_name}"  # Chama a rota internamente
+        requests.post(forecast_url)
 
-    new_weather = Weather(city=city_name, temperature=temperature, condition=condition)
-    db.session.add(new_weather)
-    db.session.commit()
+        return jsonify(new_weather.to_dict()), 201
 
-    return jsonify(new_weather.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
 
 @app.route("/weather", methods=["GET"])
 def list_weather():
@@ -260,22 +261,16 @@ def listar_previsoes_por_cidade(cidade_id):
 @app.route("/forecast/<city>", methods=["POST"])
 def create_forecast(city):
     try:
-        # Primeiro verifica se já temos dados recentes (últimas 6 horas)
-        existing = WeatherForecast.query.filter(
-            WeatherForecast.city == city,
-            WeatherForecast.created_at >= datetime.utcnow() - timedelta(hours=6)
-        ).first()
+        # Remove previsões antigas para evitar duplicatas
+        WeatherForecast.query.filter_by(city=city).delete()
         
-        if existing:
-            return jsonify({"message": "Dados já estão atualizados"}), 200
-
         # Busca novos dados na OpenWeather
         url = f"https://api.openweathermap.org/data/2.5/forecast?q={city}&appid={OPENWEATHER_API_KEY}&units=metric&lang=pt_br"
         resp = requests.get(url)
         resp.raise_for_status()
         data = resp.json()
 
-        # Processa cada dia da previsão
+        # Processa cada período da previsão (8 períodos por dia × 5 dias = 40 entradas)
         for item in data['list']:
             forecast_date = parse(item['dt_txt'])
             new_forecast = WeatherForecast(
@@ -289,11 +284,11 @@ def create_forecast(city):
             db.session.add(new_forecast)
         
         db.session.commit()
-        return jsonify({"message": "Previsão atualizada com sucesso"}), 201
+        return jsonify({"message": f"Previsão para {city} atualizada com sucesso"}), 201
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e)}), 500
     
 @app.route('/forecast/<city_name>', methods=['GET'])
 def get_5day_forecast(city_name):
