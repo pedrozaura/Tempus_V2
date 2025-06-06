@@ -75,3 +75,21 @@ flask db migrate -m "Descrição da migração (ex: cria tabela WeatherForecast)
 flask db upgrade
 
 ```
+
+```bash
+npm install lucide-react
+npm install lucide-react-native react-native-svg
+
+npm install --save-dev babel-plugin-module-resolver
+
+```
+
+# Para gerar o APK
+
+```bash
+npm install -g eas-cli
+```
+
+eas login
+
+Passar usuario e senha do ExpoGo para gerar o APK

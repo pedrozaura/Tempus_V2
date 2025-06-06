@@ -11,8 +11,7 @@ from flask_cors import CORS
 
 
 import requests
-OPENWEATHER_API_KEY = "91b363d9e740bd88f0809fa3a5db21ed"  # Inserir chave da API OpenWeatherMap aqui
-
+OPENWEATHER_API_KEY = "91b363d9e740bd88f0809fa3a5db21ed"  
 
 from models import Cidade, Previsao
 
@@ -36,7 +35,7 @@ def index():
     """
     from datetime import datetime
     return jsonify({
-        "projeto": "TEMPUS – Radar Meteorológico em Tempo Real",
+        "projeto": "TEMPUS - Radar Meteorológico em Tempo Real",
         "mensagem": "Bem-vindo à API Tempus!",
         "data_hora": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     })
@@ -45,24 +44,6 @@ def index():
 
 @app.route("/weather", methods=["POST"])
 def create_weather():
-    """
-    Cria um novo registro meteorológico com dados da OpenWeatherMap
-    ---
-    parameters:
-      - in: body
-        name: body
-        required: true
-        schema:
-          properties:
-            city:
-              type: string
-              example: São Paulo
-    responses:
-      201:
-        description: Registro criado
-      400:
-        description: Erro na requisição ou consulta externa
-    """
     data = request.get_json()
     
     if not data or "city" not in data:
@@ -110,20 +91,6 @@ def list_weather():
 
 @app.route("/weather/<int:id>", methods=["GET"])
 def get_weather_by_id(id):
-    """
-    Retorna um registro meteorológico por ID
-    ---
-    parameters:
-      - name: id
-        in: path
-        type: integer
-        required: true
-    responses:
-      200:
-        description: Registro encontrado
-      404:
-        description: Registro não encontrado
-    """
     weather = Weather.query.get(id)
     if not weather:
         return jsonify({"error": "Registro não encontrado"}), 404
@@ -257,25 +224,6 @@ def delete_alert(id):
 
 @app.route("/cidades", methods=["POST"])
 def criar_cidade():
-    """
-    Cria uma nova cidade
-    ---
-    parameters:
-      - in: body
-        name: body
-        required: true
-        schema:
-          properties:
-            nome:
-              type: string
-              example: Fortaleza
-            estado:
-              type: string
-              example: CE
-    responses:
-      201:
-        description: Cidade criada com sucesso
-    """
     data = request.get_json()
     nova = Cidade(nome=data["nome"], estado=data["estado"])
     db.session.add(nova)
@@ -284,43 +232,16 @@ def criar_cidade():
 
 @app.route("/cidades", methods=["GET"])
 def listar_cidades():
-    """
-    Lista todas as cidades cadastradas
-    ---
-    responses:
-      200:
-        description: Lista de cidades
-    """
     return jsonify([c.to_dict() for c in Cidade.query.all()])
 
 @app.route("/previsoes", methods=["POST"])
 def criar_previsoes():
     """
-    Cria previsões meteorológicas para uma cidade
-    ---
-    parameters:
-      - in: body
-        name: body
-        required: true
-        schema:
-          type: array
-          items:
-            type: object
-            properties:
-              cidade_id:
-                type: integer
-              data:
-                type: string
-                format: date
-              temperatura:
-                type: number
-              clima:
-                type: string
-              umidade:
-                type: number
-    responses:
-      201:
-        description: Previsões criadas
+    Espera um array JSON com previsões dos próximos dias:
+    [
+      { "cidade_id": 1, "data": "2025-06-04", "temperatura": 22.5, "clima": "Céu limpo", "umidade": 75 },
+      ...
+    ]
     """
     dados = request.get_json()
     novas = []
@@ -333,38 +254,12 @@ def criar_previsoes():
 
 @app.route("/previsoes/<int:cidade_id>", methods=["GET"])
 def listar_previsoes_por_cidade(cidade_id):
-    """
-    Lista previsões de uma cidade
-    ---
-    parameters:
-      - name: cidade_id
-        in: path
-        type: integer
-        required: true
-    responses:
-      200:
-        description: Lista de previsões
-    """
     previsoes = Previsao.query.filter_by(cidade_id=cidade_id).order_by(Previsao.data).all()
     return jsonify([p.to_dict() for p in previsoes])
 
 
 @app.route("/forecast/<city>", methods=["POST"])
 def create_forecast(city):
-    """
-    Busca e armazena previsão de 5 dias para uma cidade
-    ---
-    parameters:
-      - name: city
-        in: path
-        type: string
-        required: true
-    responses:
-      201:
-        description: Previsão atualizada com sucesso
-      500:
-        description: Erro ao atualizar previsão
-    """
     try:
         # Remove previsões antigas para evitar duplicatas
         WeatherForecast.query.filter_by(city=city).delete()
@@ -397,22 +292,8 @@ def create_forecast(city):
     
 @app.route('/forecast/<city_name>', methods=['GET'])
 def get_5day_forecast(city_name):
-    """
-    Retorna previsões de 5 dias para uma cidade
-    ---
-    parameters:
-      - name: city_name
-        in: path
-        type: string
-        required: true
-    responses:
-      200:
-        description: Lista de previsões
-      404:
-        description: Nenhuma previsão encontrada
-    """
     try:
-        # Busca previsões dos próximos 5 dias 
+        # Busca previsões dos próximos 5 dias (filtra para 1 registro por dia)
         forecasts = WeatherForecast.query.filter(
             WeatherForecast.city == city_name,
             WeatherForecast.date >= datetime.now(timezone.utc),
@@ -422,7 +303,7 @@ def get_5day_forecast(city_name):
         if not forecasts:
             return jsonify({"error": "Nenhuma previsão encontrada"}), 404
             
-        # Agrupa por dia 
+        # Agrupa por dia (opcional)
         forecast_data = [{
             "date": f.date.strftime('%Y-%m-%d'),
             "temperature": f.temperature,
