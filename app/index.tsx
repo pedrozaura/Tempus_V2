@@ -1,5 +1,4 @@
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-//import { Button } from "@/components/ui/Button";// ajuste o número de ../ conforme a estrutura do seu app
 import { Card } from "@/components/ui/Card";
 import { WeatherCard } from "@/components/WeatherCard";
 import { useToast } from "@/hooks/use-toast";
